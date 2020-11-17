@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 
 class PaypalController extends Controller
 {
+    public function __construct()
+    {
+        //
+    }
     /**
      * Display a listing of the resource.
      *
