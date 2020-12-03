@@ -3,13 +3,27 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\URL;
+use PayPal\Api\Amount;
+use PayPal\Api\Item;
+use PayPal\Api\ItemList;
+use PayPal\Api\Payer;
+use PayPal\Api\Payment;
+use PayPal\Api\PaymentExecution;
+use PayPal\Api\RedirectUrls;
+use PayPal\Api\Transaction;
+use PayPal\Auth\OAuthTokenCredential;
+use PayPal\Rest\ApiContext;
 
 class PaymentController extends Controller
 {
     public function __construct()
     {
         /** PayPal api context **/
-        $paypal_conf = \Config::get('paypal');
+        $paypal_conf = Config::get('paypal');
 
         $this->_api_context = new ApiContext(new OAuthTokenCredential(
             $paypal_conf['client_id'],
@@ -53,14 +67,18 @@ class PaymentController extends Controller
                 /** dd($payment->create($this->_api_context));exit; **/
 
         try {
+
             $payment->create($this->_api_context);
+
         } catch (\PayPal\Exception\PPConnectionException $ex) {
-            if (\Config::get('app.debug')) {
-                \Session::put('error', 'Connection timeout');
+
+            if (Config::get('app.debug')) {
+
+                Session::put('error', 'Connection timeout');
 
                 return Redirect::route('paywithpaypal');
             } else {
-                \Session::put('error', 'Some error occur, sorry for inconvenient');
+                Session::put('error', 'Some error occur, sorry for inconvenient');
                 return Redirect::route('paywithpaypal');
             }
         }
@@ -80,7 +98,7 @@ class PaymentController extends Controller
             return Redirect::away($redirect_url);
         }
 
-        \Session::put('error', 'Unknown error occurred');
+        Session::put('error', 'Unknown error occurred');
 
         return Redirect::route('paywithpaypal');
     }
@@ -94,7 +112,7 @@ class PaymentController extends Controller
         Session::forget('paypal_payment_id');
 
         if (empty(Input::get('PayerID')) || empty(Input::get('token'))) {
-            \Session::put('error', 'Payment failed');
+            Session::put('error', 'Payment failed');
             return Redirect::route('/');
         }
 
@@ -106,11 +124,11 @@ class PaymentController extends Controller
         $result = $payment->execute($execution, $this->_api_context);
 
         if ($result->getState() == 'approved') {
-            \Session::put('success', 'Payment success');
+            Session::put('success', 'Payment success');
             return Redirect::route('/');
         }
 
-        \Session::put('error', 'Payment failed');
+        Session::put('error', 'Payment failed');
 
         return Redirect::route('/');
     }
